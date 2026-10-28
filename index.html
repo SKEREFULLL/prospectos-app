@@ -1,0 +1,250 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Prospectos</title>
+<meta name="theme-color" content="#FAFAF9" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0E0F11" media="(prefers-color-scheme: dark)">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&display=swap">
+<style>
+:root{
+  --bg:#FAFAF9; --surface:#FFFFFF; --ink:#111316; --soft:#6B7079; --faint:#ECEDEF; --line:#E4E5E8;
+  --wa:#17A34A; --ok:#17A34A; --warn:#D08A0E; --off:#A3A7AE;
+  --font:"Figtree",system-ui,-apple-system,"Segoe UI",Arial,sans-serif;
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){:root{
+  --bg:#0E0F11; --surface:#16181B; --ink:#F1F2F4; --soft:#8D929B; --faint:#202328; --line:#24272C;
+  --wa:#2BC466; --ok:#2BC466; --warn:#E9A93A; --off:#6A6F77; color-scheme:dark }}
+[hidden]{display:none!important}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font-family:var(--font);font-size:16px;line-height:1.35;-webkit-font-smoothing:antialiased;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--bg)}
+.wrap{max-width:540px;margin:0 auto;padding-left:max(18px,env(safe-area-inset-left,0px));padding-right:max(18px,env(safe-area-inset-right,0px));padding-block:0 40px}
+header{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bg);padding-block:20px 6px;display:grid;gap:14px}
+.top{display:flex;align-items:flex-end;justify-content:space-between;gap:12px}
+h1{font-weight:700;font-size:28px;letter-spacing:-.02em;margin:0;line-height:1}
+.count{font-size:13px;color:var(--soft);font-variant-numeric:tabular-nums;text-align:right}
+.tabs{display:flex;gap:18px;overflow-x:auto;scrollbar-width:none;border-bottom:1px solid var(--line)}
+.tabs::-webkit-scrollbar{display:none}
+.tab{flex:none;border:0;background:none;color:var(--soft);font:500 15px var(--font);padding:8px 0 10px;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;font-variant-numeric:tabular-nums}
+.tab[aria-pressed="true"]{color:var(--ink);border-bottom-color:var(--ink)}
+.tab small{font-size:12px;color:var(--soft);margin-left:3px}
+.list{display:grid}
+.item{padding-block:18px;border-bottom:1px solid var(--line);display:grid;gap:14px}
+.row{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
+.who{min-width:0}
+.name{font-weight:600;font-size:18px;letter-spacing:-.01em;margin:0;line-height:1.2;overflow-wrap:anywhere}
+.meta{font-size:13px;color:var(--soft);margin-top:3px;font-variant-numeric:tabular-nums}
+.state{flex:none;display:inline-flex;align-items:center;gap:6px;border:0;background:var(--faint);color:var(--ink);font:500 13px var(--font);padding:6px 10px;border-radius:999px;cursor:pointer;white-space:nowrap}
+.dot{width:7px;height:7px;border-radius:50%;background:var(--off);flex:none}
+.dot.warn{background:var(--warn)} .dot.ok{background:var(--ok)} .dot.new{background:var(--ink)}
+.acts{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.btn{display:flex;align-items:center;justify-content:center;gap:7px;height:46px;border-radius:12px;font:600 14px var(--font);text-decoration:none;border:0;cursor:pointer;background:var(--faint);color:var(--ink)}
+.btn.call{background:var(--ink);color:var(--bg)}
+.btn.wa svg{color:var(--wa)}
+.btn[aria-disabled="true"]{opacity:.3;pointer-events:none}
+.btn svg{width:17px;height:17px;flex:none}
+.picker{display:flex;flex-wrap:wrap;gap:6px}
+.opt{border:1px solid var(--line);background:var(--surface);color:var(--ink);font:500 13px var(--font);padding:8px 12px;border-radius:999px;cursor:pointer;display:inline-flex;align-items:center;gap:6px}
+.opt[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+button:focus-visible,a:focus-visible,input:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
+.empty{color:var(--soft);padding:56px 0;display:grid;gap:6px;text-align:center}
+.empty b{color:var(--ink);font-size:17px;font-weight:600}
+.toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 10px 10px 16px;border-radius:12px;font:500 14px var(--font);z-index:20;width:max-content;max-width:calc(100% - 36px);display:flex;align-items:center;gap:12px}
+.toast button{border:0;background:none;color:var(--bg);font:700 14px var(--font);padding:6px 8px;cursor:pointer;text-decoration:underline;text-underline-offset:3px}
+.sheet-bg{position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:30;display:flex;align-items:flex-end;justify-content:center}
+.sheet{background:var(--surface);width:100%;max-width:540px;border-radius:18px 18px 0 0;padding:22px max(18px,env(safe-area-inset-left,0px)) calc(22px + env(safe-area-inset-bottom,0px));display:grid;gap:14px}
+.sheet h3{margin:0;font-size:18px;font-weight:600}
+.sheet p{margin:0;color:var(--soft);font-size:14px}
+.choices{display:grid;gap:8px}
+.choice{height:50px;border-radius:12px;border:0;background:var(--faint);color:var(--ink);font:600 15px var(--font);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px}
+.choice.primary{background:var(--ink);color:var(--bg)}
+.choice.ghost{background:none;color:var(--soft);height:40px}
+.setup{padding-block:64px 24px;display:grid;gap:14px}
+.setup input{width:100%;height:48px;border:1px solid var(--line);border-radius:12px;background:var(--surface);color:var(--ink);font:400 15px var(--font);padding:0 14px}
+.refresh{border:0;background:none;color:var(--soft);font:500 13px var(--font);padding:0;cursor:pointer}
+</style>
+</head>
+<body>
+<div class="wrap" id="app"></div>
+<div class="toast" id="toast" hidden><span id="toastText"></span><button id="toastUndo" type="button" hidden>Deshacer</button></div>
+<div id="sheet"></div>
+
+<script>
+const STATES = [
+  {k:"Pendiente",c:"new"},{k:"No atendió",c:"warn"},{k:"WhatsApp enviado",c:"warn"},{k:"DM enviado",c:"warn"},
+  {k:"Respondió",c:"ok"},{k:"Demo",c:"ok"},{k:"Cliente",c:"ok"},{k:"No interesa",c:"off"}
+];
+const TABS = [
+  {k:"hoy",label:"Por contactar",test:s=>s==="Pendiente"||s==="No atendió"},
+  {k:"seg",label:"Seguimiento",test:s=>s==="WhatsApp enviado"||s==="DM enviado"},
+  {k:"cal",label:"Respondieron",test:s=>s==="Respondió"||s==="Demo"||s==="Cliente"},
+  {k:"todos",label:"Todos",test:()=>true}
+];
+const DEFAULT_MSG = "Hola, como están? me llamo Joaquin y desarrollo software\n\nVi que hacen muebles a medida e hice un programa que arma el presupuesto, el despiece y el plano de corte en menos de 5 minutos, sin tener que modelar pieza por pieza en SketchUp\n\n¿Les gustaría ver como lo hace con uno de sus proyectos?";
+const I = {
+  call:'<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M6.6 10.8a15.1 15.1 0 0 0 6.6 6.6l2.2-2.2c.3-.3.7-.4 1-.2 1.1.4 2.3.6 3.6.6.6 0 1 .4 1 1V20c0 .6-.4 1-1 1A17 17 0 0 1 3 4c0-.6.4-1 1-1h3.5c.6 0 1 .4 1 1 0 1.3.2 2.5.6 3.6.1.3 0 .7-.2 1z"/></svg>',
+  wa:'<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2zm5.3 14.1c-.2.6-1.3 1.2-1.8 1.2-.5.1-1 .2-3.3-.7-2.8-1.1-4.5-4-4.7-4.2-.1-.2-1.1-1.5-1.1-2.9s.7-2.1 1-2.4c.3-.3.6-.3.8-.3h.6c.2 0 .4 0 .6.5l.9 2.1c.1.2.1.4 0 .6l-.4.6-.4.4c-.1.2-.3.3-.1.6.2.3.8 1.4 1.8 2.2 1.2 1.1 2.2 1.4 2.5 1.6.3.1.5.1.7-.1l.9-1.1c.2-.3.4-.2.7-.1l2 1c.3.1.5.2.5.3.1.2.1.6-.1 1.2z"/></svg>',
+  ig:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="1" fill="currentColor"/></svg>'
+};
+const store = {
+  get(k){ try{return localStorage.getItem(k)}catch(e){return null} },
+  set(k,v){ try{localStorage.setItem(k,v)}catch(e){} }
+};
+const esc = s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const fmt = p=>{ if(!p) return ""; const m=String(p).match(/^54(9?)(\d{2,4})(\d{6,8})$/); return m?`+54 ${m[1]?"9 ":""}${m[2]} ${m[3]}`:"+"+p; };
+
+// Conexión: llega una sola vez por el link #c=URL|CLAVE y queda guardada en el celular
+(function(){
+  const h = location.hash.match(/^#c=(.+)$/);
+  if(h){ store.set("conexion", decodeURIComponent(h[1])); history.replaceState(null,"",location.pathname); }
+})();
+let API=null, KEY=null;
+function loadConn(){ const c=store.get("conexion"); if(!c||!c.includes("|")) return false; [API,KEY]=c.split("|"); return true; }
+
+let leads = [], msg = DEFAULT_MSG, tab = store.get("filtro")||"hoy", open = null, loading = true, error = "";
+try{ const cached = JSON.parse(store.get("cache")||"null"); if(cached){ leads=cached.filas||[]; msg=cached.mensaje||DEFAULT_MSG; loading=false; } }catch(e){}
+
+async function api(params){
+  const q = new URLSearchParams({k:KEY, ...params});
+  const r = await fetch(`${API}?${q}`, {redirect:"follow"});
+  const j = await r.json();
+  if(j.error) throw new Error(j.error);
+  return j;
+}
+async function refresh(){
+  try{
+    const j = await api({});
+    leads = j.filas||[]; msg = j.mensaje||DEFAULT_MSG; error=""; loading=false;
+    store.set("cache", JSON.stringify(j));
+  }catch(e){ error = e.message==="clave" ? "clave" : "red"; loading=false; }
+  render();
+}
+async function setState(lead, next, {undo=true, label}={}){
+  const prev = lead.estado;
+  if(prev===next) return;
+  lead.estado = next; open=null; render(); store.set("cache", JSON.stringify({filas:leads,mensaje:msg}));
+  toast(label || `${lead.nombre}: ${next}`, undo ? ()=>setState(lead, prev, {undo:false, label:"Listo, lo volví atrás"}) : null);
+  try{ await api({fila:lead.fila, estado:next}); }
+  catch(e){ lead.estado = prev; render(); toast("No se pudo guardar. Revisá la conexión y probá de nuevo."); }
+}
+
+let tt;
+function toast(text, onUndo){
+  const t=document.getElementById("toast"), u=document.getElementById("toastUndo");
+  document.getElementById("toastText").textContent=text;
+  u.hidden=!onUndo; u.onclick=()=>{ t.hidden=true; onUndo&&onUndo(); };
+  t.hidden=false; clearTimeout(tt); tt=setTimeout(()=>t.hidden=true, onUndo?5000:2600);
+}
+
+function renderSetup(){
+  document.getElementById("app").innerHTML = `<div class="setup">
+    <h1>Prospectos</h1>
+    <p style="color:var(--soft);margin:0">Pegá el link de conexión que te pasó Claude. Se guarda en el celular y no lo tenés que poner de nuevo.</p>
+    <input id="connIn" type="url" placeholder="Link de conexión" autocomplete="off">
+    <button class="choice primary" id="connBtn" type="button">Conectar</button>
+  </div>`;
+  document.getElementById("connBtn").onclick=()=>{
+    let v=document.getElementById("connIn").value.trim();
+    const m=v.match(/#c=(.+)$/); if(m) v=decodeURIComponent(m[1]);
+    if(!v.includes("|")){ toast("Ese link no sirve. Copiá el link completo que te pasó Claude."); return; }
+    store.set("conexion", v); loadConn(); loading=true; render(); refresh();
+  };
+}
+
+function render(){
+  if(!API){ renderSetup(); return; }
+  const app=document.getElementById("app");
+  if(!app.querySelector("header")){
+    app.innerHTML = `<header>
+      <div class="top"><h1>Prospectos</h1><div class="count"><div id="summary"></div><button class="refresh" id="refreshBtn" type="button">Actualizar</button></div></div>
+      <nav class="tabs" id="tabs" aria-label="Filtrar"></nav>
+    </header><main class="list" id="list" aria-live="polite"></main>`;
+    document.getElementById("tabs").onclick=e=>{ const b=e.target.closest(".tab"); if(!b) return; tab=b.dataset.t; open=null; store.set("filtro",tab); render(); window.scrollTo({top:0}); };
+    document.getElementById("refreshBtn").onclick=()=>{ document.getElementById("summary").textContent="Actualizando…"; refresh(); };
+    document.getElementById("list").onclick=onListClick;
+  }
+  const cnt = k=>leads.filter(l=>TABS.find(t=>t.k===k).test(l.estado)).length;
+  document.getElementById("tabs").innerHTML = TABS.map(t=>`<button class="tab" type="button" data-t="${t.k}" aria-pressed="${t.k===tab}">${t.label}<small>${cnt(t.k)}</small></button>`).join("");
+  const pend = leads.filter(l=>l.estado==="Pendiente").length;
+  document.getElementById("summary").textContent = leads.length ? `${pend} sin tocar de ${leads.length}` : "";
+  const list=document.getElementById("list");
+  if(loading && !leads.length){ list.innerHTML=`<div class="empty"><b>Cargando la lista</b><span>Trayendo los talleres de tu planilla.</span></div>`; return; }
+  if(error==="clave"){ list.innerHTML=`<div class="empty"><b>La conexión no es válida</b><span>Abrí de nuevo el link de conexión que te pasó Claude.</span></div>`; return; }
+  if(error && !leads.length){ list.innerHTML=`<div class="empty"><b>No hay conexión</b><span>Revisá internet y tocá Actualizar.</span></div>`; return; }
+  const t=TABS.find(x=>x.k===tab)||TABS[0];
+  const rows=leads.filter(l=>t.test(l.estado));
+  if(!rows.length){ list.innerHTML=`<div class="empty"><b>${tab==="hoy"?"Contactaste a todos":"Nada por acá"}</b><span>${tab==="hoy"?"Pedile a Claude que prospecte más.":"Cuando cambies un estado, aparece en esta lista."}</span></div>`; return; }
+  list.innerHTML = rows.map(l=>{
+    const d=STATES.find(s=>s.k===l.estado)||STATES[0], isOpen=open===l.fila;
+    const meta=[fmt(l.tel), l.ig?"@"+l.ig:""].filter(Boolean).join("  ·  ");
+    const wa = l.tel?`https://wa.me/${l.tel}?text=${encodeURIComponent(msg)}`:"#";
+    const ig = l.ig?`https://ig.me/m/${encodeURIComponent(l.ig)}`:"#";
+    return `<article class="item" data-f="${l.fila}">
+      <div class="row">
+        <div class="who"><h2 class="name">${esc(l.nombre)}</h2>${meta?`<div class="meta">${esc(meta)}</div>`:""}</div>
+        <button class="state" type="button" data-act="toggle" aria-expanded="${isOpen}"><span class="dot ${d.c}"></span>${esc(l.estado)}</button>
+      </div>
+      ${isOpen?`<div class="picker" role="group" aria-label="Cambiar estado">${STATES.map(s=>`<button class="opt" type="button" data-s="${esc(s.k)}" aria-pressed="${s.k===l.estado}"><span class="dot ${s.c}"></span>${esc(s.k)}</button>`).join("")}</div>`:""}
+      <div class="acts">
+        <a class="btn call" href="${l.tel?"tel:+"+esc(l.tel):"#"}" data-act="call" aria-disabled="${!l.tel}">${I.call}Llamar</a>
+        <a class="btn wa" href="${esc(wa)}" target="_blank" rel="noopener" data-act="wa" aria-disabled="${!l.tel}">${I.wa}WhatsApp</a>
+        <a class="btn" href="${esc(ig)}" target="_blank" rel="noopener" data-act="ig" aria-disabled="${!l.ig}">${I.ig}Instagram</a>
+      </div>
+    </article>`;
+  }).join("");
+}
+
+let pendingCall = null;
+function onListClick(e){
+  const item=e.target.closest(".item"); if(!item) return;
+  const lead=leads.find(l=>String(l.fila)===item.dataset.f); if(!lead) return;
+  const act=e.target.closest("[data-act]")?.dataset.act;
+  if(act==="toggle"){ open = open===lead.fila?null:lead.fila; render(); return; }
+  if(act==="call"){ pendingCall = lead; return; } // el link abre el teléfono; al volver, preguntamos cómo salió
+  if(act==="wa"){ setState(lead,"WhatsApp enviado",{label:`WhatsApp a ${lead.nombre} marcado como enviado`}); return; }
+  if(act==="ig"){
+    navigator.clipboard?.writeText(msg).catch(()=>{});
+    setState(lead,"DM enviado",{label:"Mensaje copiado. Pegalo en el chat y mandalo."});
+    return;
+  }
+  const o=e.target.closest(".opt"); if(o) setState(lead, o.dataset.s, {undo:false});
+}
+
+function askCall(lead){
+  const el=document.getElementById("sheet");
+  const hasWa = !!lead.tel;
+  el.innerHTML = `<div class="sheet-bg" id="bg"><div class="sheet" role="dialog" aria-label="Resultado de la llamada">
+    <h3>¿Cómo salió con ${esc(lead.nombre)}?</h3>
+    <div class="choices">
+      ${hasWa?`<a class="choice primary" id="cWa" href="https://wa.me/${lead.tel}?text=${encodeURIComponent(msg)}" target="_blank" rel="noopener">${I.wa}No atendió, mandar WhatsApp</a>`:""}
+      <button class="choice" type="button" data-s="No atendió">No atendió</button>
+      <button class="choice" type="button" data-s="Respondió">Hablamos, le interesa</button>
+      <button class="choice" type="button" data-s="No interesa">No le interesa</button>
+      <button class="choice ghost" type="button" data-s="">Cerrar</button>
+    </div>
+  </div></div>`;
+  const close=()=>{ el.innerHTML=""; };
+  el.querySelector("#bg").onclick=e=>{ if(e.target.id==="bg") close(); };
+  el.querySelectorAll("[data-s]").forEach(b=>b.onclick=()=>{ close(); if(b.dataset.s) setState(lead,b.dataset.s); });
+  const w=el.querySelector("#cWa"); if(w) w.onclick=()=>{ close(); setState(lead,"WhatsApp enviado",{label:`WhatsApp a ${lead.nombre} marcado como enviado`}); };
+}
+document.addEventListener("visibilitychange",()=>{
+  if(document.visibilityState==="visible"){
+    if(pendingCall){ const l=pendingCall; pendingCall=null; askCall(l); }
+    else if(API) refresh();
+  }
+});
+
+if("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(()=>{});
+if(loadConn()){ render(); refresh(); } else { render(); }
+</script>
+</body>
+</html>
