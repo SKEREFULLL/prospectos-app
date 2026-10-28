@@ -1,4 +1,4 @@
-const CACHE = 'prospectos-v1';
+const CACHE = 'prospectos-v2';
 const SHELL = ['./', './index.html', './manifest.json', './icon-192.png', './icon-512.png'];
 
 self.addEventListener('install', e => {
