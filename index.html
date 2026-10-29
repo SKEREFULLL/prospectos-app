@@ -78,6 +78,13 @@ button:focus-visible,a:focus-visible,input:focus-visible{outline:2px solid var(-
 .daysrow input{flex:1;min-width:0;height:50px;border:1px solid var(--line);border-radius:12px;background:var(--surface);color:var(--ink);font:400 15px var(--font);padding:0 14px}
 .daysrow .choice{padding:0 18px}
 .refresh{border:0;background:none;color:var(--soft);font:500 13px var(--font);padding:0;cursor:pointer}
+.done{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.chk{display:inline-flex;align-items:center;gap:10px;font:500 14px var(--font);cursor:pointer;user-select:none}
+.chk input{width:22px;height:22px;margin:0;accent-color:var(--ok);cursor:pointer}
+.chk.on{color:var(--ok)}
+.pass{height:42px;padding:0 16px;border-radius:12px;border:0;font:600 14px var(--font);cursor:pointer;background:var(--ink);color:var(--bg)}
+.pass:disabled{background:var(--faint);color:var(--off);cursor:default}
+.search{width:100%;height:44px;border:1px solid var(--line);border-radius:12px;background:var(--surface);color:var(--ink);font:400 15px var(--font);padding:0 14px;margin-bottom:6px}
 </style>
 </head>
 <body>
@@ -132,7 +139,13 @@ const fmt = p=>{ if(!p) return ""; const m=String(p).match(/^54(9?)(\d{2,4})(\d{
 let API=null, KEY=null;
 function loadConn(){ const c=store.get("conexion"); if(!c||!c.includes("|")) return false; [API,KEY]=c.split("|"); return true; }
 
-let leads = [], msg = DEFAULT_MSG, tab = store.get("filtro")||"hoy", open = null, loading = true, error = "";
+let leads = [], msg = DEFAULT_MSG, tab = store.get("filtro")||"hoy", open = null, loading = true, error = "", query = "";
+// Check de "le escribí" en Por contactar: queda en el celular hasta que lo pasás a Seguimiento.
+// Guarda por qué canal le escribiste (ig o wa) para ponerle el estado correcto al pasarlo.
+let checks = {}; try{ checks = JSON.parse(localStorage.getItem("checks")||"{}"); }catch(e){}
+const saveChecks = ()=>store.set("checks", JSON.stringify(checks));
+function marcar(lead, canal){ checks[lead.fila] = canal; saveChecks(); render(); }
+const sinAcentos = s=>String(s??"").normalize("NFD").replace(/[̀-ͯ]/g,"").toLowerCase();
 try{ const cached = JSON.parse(store.get("cache")||"null"); if(cached){ leads=cached.filas||[]; msg=cached.mensaje||DEFAULT_MSG; loading=false; } }catch(e){}
 
 async function api(params){
@@ -154,6 +167,7 @@ async function refresh(){
 async function setState(lead, next, {undo=true, label, contactar=""}={}){
   const prev = lead.estado, prevC = lead.contactar||"", prevCambio = lead.cambio||"";
   if(prev===next && prevC===contactar) return;
+  if(checks[lead.fila]){ delete checks[lead.fila]; saveChecks(); }
   lead.estado = next; lead.contactar = contactar; lead.cambio = today();
   localCambios[lead.fila] = lead.cambio; store.set("cambios", JSON.stringify(localCambios));
   open=null; render(); store.set("cache", JSON.stringify({filas:leads,mensaje:msg}));
@@ -197,7 +211,15 @@ function askIgAccount(lead, href){
 }
 function sendIg(lead){
   navigator.clipboard?.writeText(msg).catch(()=>{});
-  setState(lead,"DM enviado",{label:"Mensaje copiado. Pegalo en el chat y mandalo."});
+  if(TABS[0].test(lead)){ marcar(lead,"ig"); toast("Mensaje copiado. Cuando lo mandes, tocá Pasar a Seguimiento."); }
+  else toast("Mensaje copiado. Pegalo en el chat y mandalo.");
+}
+function sendWa(lead){
+  if(TABS[0].test(lead)){ marcar(lead,"wa"); toast("Cuando lo mandes, tocá Pasar a Seguimiento."); }
+}
+function pasar(lead){
+  const canal = checks[lead.fila] || (lead.ig && !lead.tel ? "ig" : lead.tel ? "wa" : "ig");
+  setState(lead, canal==="ig" ? "DM enviado" : "WhatsApp enviado", {label:`${lead.nombre}: pasado a Seguimiento`});
 }
 
 let tt;
@@ -230,7 +252,9 @@ function render(){
     app.innerHTML = `<header>
       <div class="top"><h1>Prospectos</h1><div class="count"><div id="summary"></div><button class="refresh" id="refreshBtn" type="button">Actualizar</button></div></div>
       <nav class="tabs" id="tabs" aria-label="Filtrar"></nav>
+      <input class="search" id="search" type="search" placeholder="Buscar por nombre, Instagram o teléfono" aria-label="Buscar" autocomplete="off" hidden>
     </header><main class="list" id="list" aria-live="polite"></main>`;
+    document.getElementById("search").oninput=e=>{ query=e.target.value; render(); };
     document.getElementById("tabs").onclick=e=>{ const b=e.target.closest(".tab"); if(!b) return; tab=b.dataset.t; open=null; store.set("filtro",tab); render(); window.scrollTo({top:0}); };
     document.getElementById("refreshBtn").onclick=()=>{ document.getElementById("summary").textContent="Actualizando…"; refresh(); };
     document.getElementById("list").onclick=onListClick;
@@ -245,6 +269,11 @@ function render(){
   if(error && !leads.length){ list.innerHTML=`<div class="empty"><b>No hay conexión</b><span>Revisá internet y tocá Actualizar.</span></div>`; return; }
   const t=TABS.find(x=>x.k===tab)||TABS[0];
   let rows=leads.filter(l=>t.test(l));
+  const buscar = tab==="seg";
+  document.getElementById("search").hidden = !buscar;
+  const q = buscar ? sinAcentos(query.trim()) : "";
+  if(q){ const qd=q.replace(/\D/g,""); rows = rows.filter(l=>sinAcentos(l.nombre).includes(q) || sinAcentos(l.ig).includes(q.replace(/^@/,"")) || (qd.length>=3 && String(l.tel||"").includes(qd))); }
+  if(q && !rows.length){ list.innerHTML=`<div class="empty"><b>No encontré “${esc(query.trim())}”</b><span>Probá con otra parte del nombre o del Instagram.</span></div>`; return; }
   if(tab==="hoy"){ rows = [...rows.filter(due).sort((a,b)=>(a.contactar||"").localeCompare(b.contactar||"")), ...rows.filter(l=>!due(l))]; }
   else if(tab!=="todos"){ rows = rows.map((l,i)=>[l,i]).sort((a,b)=>cambioDe(b[0]).localeCompare(cambioDe(a[0])) || b[1]-a[1]).map(x=>x[0]); }
   if(!rows.length){ list.innerHTML=`<div class="empty"><b>${tab==="hoy"?"Contactaste a todos":"Nada por acá"}</b><span>${tab==="hoy"?"Pedile a Claude que prospecte más.":"Cuando cambies un estado, aparece en esta lista."}</span></div>`; return; }
@@ -265,6 +294,10 @@ function render(){
         <a class="btn wa" href="${esc(wa)}" target="_blank" rel="noopener" data-act="wa" aria-disabled="${!l.tel}">${I.wa}WhatsApp</a>
         <a class="btn" href="${esc(ig)}" target="_blank" rel="noopener" data-act="ig" aria-disabled="${!l.ig}">${I.ig}Instagram</a>
       </div>
+      ${TABS[0].test(l)?`<div class="done">
+        <label class="chk${checks[l.fila]?" on":""}"><input type="checkbox" data-act="check" ${checks[l.fila]?"checked":""}>Le escribí</label>
+        <button class="pass" type="button" data-act="pasar" ${checks[l.fila]?"":"disabled"}>Pasar a Seguimiento</button>
+      </div>`:""}
     </article>`;
   }).join("");
 }
@@ -276,7 +309,9 @@ function onListClick(e){
   const act=e.target.closest("[data-act]")?.dataset.act;
   if(act==="toggle"){ open = open===lead.fila?null:lead.fila; render(); return; }
   if(act==="call"){ pendingCall = lead; return; } // el link abre el teléfono; al volver, preguntamos cómo salió
-  if(act==="wa"){ setState(lead,"WhatsApp enviado",{label:`WhatsApp a ${lead.nombre} marcado como enviado`}); return; }
+  if(act==="wa"){ sendWa(lead); return; }
+  if(act==="check"){ if(e.target.checked) marcar(lead, lead.ig && !lead.tel ? "ig" : lead.tel ? "wa" : "ig"); else { delete checks[lead.fila]; saveChecks(); render(); } return; }
+  if(act==="pasar"){ pasar(lead); return; }
   if(act==="days"){ open=null; render(); askDays(lead); return; }
   if(act==="ig"){
     if(store.get("igOk")!==today()){ e.preventDefault(); askIgAccount(lead, e.target.closest("a").href); return; }
@@ -302,7 +337,7 @@ function askCall(lead){
   const close=()=>{ el.innerHTML=""; };
   el.querySelector("#bg").onclick=e=>{ if(e.target.id==="bg") close(); };
   el.querySelectorAll("[data-s]").forEach(b=>b.onclick=()=>{ close(); if(b.dataset.s) setState(lead,b.dataset.s); });
-  const w=el.querySelector("#cWa"); if(w) w.onclick=()=>{ close(); setState(lead,"WhatsApp enviado",{label:`WhatsApp a ${lead.nombre} marcado como enviado`}); };
+  const w=el.querySelector("#cWa"); if(w) w.onclick=()=>{ close(); if(TABS[0].test(lead)) sendWa(lead); else setState(lead,"WhatsApp enviado",{label:`WhatsApp a ${lead.nombre} marcado como enviado`}); };
 }
 document.addEventListener("visibilitychange",()=>{
   if(document.visibilityState==="visible"){
