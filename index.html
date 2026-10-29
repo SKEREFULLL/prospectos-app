@@ -36,21 +36,23 @@ h1{font-weight:700;font-size:28px;letter-spacing:-.02em;margin:0;line-height:1}
 .tab{flex:none;border:0;background:none;color:var(--soft);font:500 15px var(--font);padding:8px 0 10px;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;font-variant-numeric:tabular-nums}
 .tab[aria-pressed="true"]{color:var(--ink);border-bottom-color:var(--ink)}
 .tab small{font-size:12px;color:var(--soft);margin-left:3px}
-.list{display:grid}
+.list{display:grid;grid-template-columns:minmax(0,1fr)}
 .item{padding-block:18px;border-bottom:1px solid var(--line);display:grid;gap:14px}
 .row{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
-.who{min-width:0}
+.who{min-width:0;flex:1 1 auto}
 .name{font-weight:600;font-size:18px;letter-spacing:-.01em;margin:0;line-height:1.2;overflow-wrap:anywhere}
-.meta{font-size:13px;color:var(--soft);margin-top:3px;font-variant-numeric:tabular-nums}
-.state{flex:none;display:inline-flex;align-items:center;gap:6px;border:0;background:var(--faint);color:var(--ink);font:500 13px var(--font);padding:6px 10px;border-radius:999px;cursor:pointer;white-space:nowrap}
+.meta{overflow-wrap:anywhere;font-size:13px;color:var(--soft);margin-top:3px;font-variant-numeric:tabular-nums}
+.state{flex:0 0 auto;max-width:50%;min-width:0;overflow:hidden;text-overflow:ellipsis;display:inline-flex;align-items:center;gap:6px;border:0;background:var(--faint);color:var(--ink);font:500 13px var(--font);padding:6px 10px;border-radius:999px;cursor:pointer;white-space:nowrap}
 .dot{width:7px;height:7px;border-radius:50%;background:var(--off);flex:none}
 .dot.warn{background:var(--warn)} .dot.ok{background:var(--ok)} .dot.new{background:var(--ink)}
-.acts{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
-.btn{display:flex;align-items:center;justify-content:center;gap:7px;height:46px;border-radius:12px;font:600 14px var(--font);text-decoration:none;border:0;cursor:pointer;background:var(--faint);color:var(--ink)}
+.acts{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.btn{display:flex;align-items:center;justify-content:center;gap:7px;height:46px;min-width:0;padding:0 6px;white-space:nowrap;border-radius:12px;font:600 14px var(--font);text-decoration:none;border:0;cursor:pointer;background:var(--faint);color:var(--ink)}
 .btn.call{background:var(--ink);color:var(--bg)}
 .btn.wa svg{color:var(--wa)}
 .btn[aria-disabled="true"]{opacity:.3;pointer-events:none}
 .btn svg{width:17px;height:17px;flex:none}
+.btn .lbl{overflow:hidden;text-overflow:ellipsis;min-width:0}
+@media (max-width:380px){.btn svg{display:none}.btn{font-size:13px}}
 .picker{display:flex;flex-wrap:wrap;gap:6px}
 .opt{border:1px solid var(--line);background:var(--surface);color:var(--ink);font:500 13px var(--font);padding:8px 12px;border-radius:999px;cursor:pointer;display:inline-flex;align-items:center;gap:6px}
 .opt[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
@@ -65,6 +67,8 @@ button:focus-visible,a:focus-visible,input:focus-visible{outline:2px solid var(-
 .sheet p{margin:0;color:var(--soft);font-size:14px}
 .choices{display:grid;gap:8px}
 .choice{height:50px;border-radius:12px;border:0;background:var(--faint);color:var(--ink);font:600 15px var(--font);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px}
+.choice{text-decoration:none;text-align:center;padding:0 12px}
+.choice svg{width:18px;height:18px;flex:none}
 .choice.primary{background:var(--ink);color:var(--bg)}
 .choice.ghost{background:none;color:var(--soft);height:40px}
 .setup{padding-block:64px 24px;display:grid;gap:14px}
@@ -79,10 +83,10 @@ button:focus-visible,a:focus-visible,input:focus-visible{outline:2px solid var(-
 .daysrow .choice{padding:0 18px}
 .refresh{border:0;background:none;color:var(--soft);font:500 13px var(--font);padding:0;cursor:pointer}
 .done{display:flex;align-items:center;justify-content:space-between;gap:10px}
-.chk{display:inline-flex;align-items:center;gap:10px;font:500 14px var(--font);cursor:pointer;user-select:none}
+.chk{white-space:nowrap;display:inline-flex;align-items:center;gap:10px;font:500 14px var(--font);cursor:pointer;user-select:none}
 .chk input{width:22px;height:22px;margin:0;accent-color:var(--ok);cursor:pointer}
 .chk.on{color:var(--ok)}
-.pass{height:42px;padding:0 16px;border-radius:12px;border:0;font:600 14px var(--font);cursor:pointer;background:var(--ink);color:var(--bg)}
+.pass{min-height:42px;padding:6px 14px;line-height:1.15;border-radius:12px;border:0;font:600 14px var(--font);cursor:pointer;background:var(--ink);color:var(--bg)}
 .pass:disabled{background:var(--faint);color:var(--off);cursor:default}
 .search{width:100%;height:44px;border:1px solid var(--line);border-radius:12px;background:var(--surface);color:var(--ink);font:400 15px var(--font);padding:0 14px;margin-bottom:6px}
 </style>
@@ -286,13 +290,13 @@ function render(){
     return `<article class="item" data-f="${l.fila}">
       <div class="row">
         <div class="who"><h2 class="name">${esc(l.nombre)}</h2>${meta?`<div class="meta">${esc(meta)}</div>`:""}${when?`<div class="when${due(l)?" due":""}${whenLabel(l)?"":" soft"}">${esc(when)}</div>`:""}</div>
-        <button class="state" type="button" data-act="toggle" aria-expanded="${isOpen}"><span class="dot ${d.c}"></span>${esc(l.estado)}</button>
+        <button class="state" type="button" data-act="toggle" aria-expanded="${isOpen}"><span class="dot ${d.c}"></span><span class="lbl" style="overflow:hidden;text-overflow:ellipsis">${esc(l.estado)}</span></button>
       </div>
       ${isOpen?`<div class="picker" role="group" aria-label="Cambiar estado">${STATES.filter(s=>s.k!=="Volver a contactar").map(s=>`<button class="opt" type="button" data-s="${esc(s.k)}" aria-pressed="${s.k===l.estado}"><span class="dot ${s.c}"></span>${esc(s.k)}</button>`).join("")}${serverV>=2?`<button class="opt" type="button" data-act="days" aria-pressed="${l.estado==="Volver a contactar"}"><span class="dot warn"></span>Contactar en…</button>`:""}</div>`:""}
       <div class="acts">
-        <a class="btn call" href="${l.tel?"tel:+"+esc(l.tel):"#"}" data-act="call" aria-disabled="${!l.tel}">${I.call}Llamar</a>
-        <a class="btn wa" href="${esc(wa)}" target="_blank" rel="noopener" data-act="wa" aria-disabled="${!l.tel}">${I.wa}WhatsApp</a>
-        <a class="btn" href="${esc(ig)}" target="_blank" rel="noopener" data-act="ig" aria-disabled="${!l.ig}">${I.ig}Instagram</a>
+        <a class="btn call" href="${l.tel?"tel:+"+esc(l.tel):"#"}" data-act="call" aria-disabled="${!l.tel}">${I.call}<span class="lbl">Llamar</span></a>
+        <a class="btn wa" href="${esc(wa)}" target="_blank" rel="noopener" data-act="wa" aria-disabled="${!l.tel}">${I.wa}<span class="lbl">WhatsApp</span></a>
+        <a class="btn" href="${esc(ig)}" target="_blank" rel="noopener" data-act="ig" aria-disabled="${!l.ig}">${I.ig}<span class="lbl">Instagram</span></a>
       </div>
       ${TABS[0].test(l)?`<div class="done">
         <label class="chk${checks[l.fila]?" on":""}"><input type="checkbox" data-act="check" ${checks[l.fila]?"checked":""}>Le escribí</label>
