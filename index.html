@@ -202,7 +202,7 @@ function askIgAccount(lead, href){
   const el=document.getElementById("sheet");
   el.innerHTML = `<div class="sheet-bg" id="bg"><div class="sheet" role="dialog" aria-label="Cuenta de Instagram">
     <h3>¿Instagram está en @${IG_ACCOUNT}?</h3>
-    <p>La app abre Instagram con la última cuenta que usaste. Si estás en tu cuenta personal, cambiá primero: en Instagram mantené apretada tu foto de perfil abajo a la derecha y elegí @${IG_ACCOUNT}.</p>
+    <p><b>Si estás en @joaquin.lls u otra cuenta, no mandes.</b> La app abre Instagram con la última cuenta que usaste y no puede ver cuál es. Para cambiar: en Instagram mantené apretada tu foto de perfil abajo a la derecha y elegí @${IG_ACCOUNT}.</p>
     <div class="choices">
       <a class="choice primary" id="igYes" href="${esc(href)}" target="_blank" rel="noopener">${I.ig}Sí, abrir el chat</a>
       <button class="choice ghost" type="button" id="igNo">Primero cambio de cuenta</button>
@@ -211,7 +211,7 @@ function askIgAccount(lead, href){
   const close=()=>{ el.innerHTML=""; };
   el.querySelector("#bg").onclick=e=>{ if(e.target.id==="bg") close(); };
   el.querySelector("#igNo").onclick=close;
-  el.querySelector("#igYes").onclick=()=>{ store.set("igOk", today()); close(); sendIg(lead); };
+  el.querySelector("#igYes").onclick=()=>{ store.set("igOkAt", String(Date.now())); close(); sendIg(lead); };
 }
 function sendIg(lead){
   navigator.clipboard?.writeText(msg).catch(()=>{});
@@ -318,7 +318,7 @@ function onListClick(e){
   if(act==="pasar"){ pasar(lead); return; }
   if(act==="days"){ open=null; render(); askDays(lead); return; }
   if(act==="ig"){
-    if(store.get("igOk")!==today()){ e.preventDefault(); askIgAccount(lead, e.target.closest("a").href); return; }
+    if(Date.now()-Number(store.get("igOkAt")||0) > 10*60*1000){ e.preventDefault(); askIgAccount(lead, e.target.closest("a").href); return; }
     sendIg(lead);
     return;
   }
