@@ -71,6 +71,11 @@ button:focus-visible,a:focus-visible,input:focus-visible{outline:2px solid var(-
 .choice svg{width:18px;height:18px;flex:none}
 .choice.primary{background:var(--ink);color:var(--bg)}
 .choice.ghost{background:none;color:var(--soft);height:40px}
+.sheet.big{min-height:72dvh;align-content:start;gap:12px}
+.sheet.big .choice{height:60px;font-size:17px;justify-content:flex-start;padding:0 18px}
+.sheet.big .choice[aria-pressed="true"]{outline:2px solid var(--ink)}
+.sheet.big .choice .dot{margin-right:4px}
+.sec{font:600 13px var(--font);color:var(--soft);text-transform:uppercase;letter-spacing:.06em;padding:22px 0 4px;border-bottom:1px solid var(--line)}
 .setup{padding-block:64px 24px;display:grid;gap:14px}
 .setup input{width:100%;height:48px;border:1px solid var(--line);border-radius:12px;background:var(--surface);color:var(--ink);font:400 15px var(--font);padding:0 14px}
 .when{font-size:13px;color:var(--warn);margin-top:3px;font-weight:500}
@@ -105,15 +110,24 @@ const STATES = [
   {k:"Respondió",c:"ok"},{k:"Demo",c:"ok"},{k:"Cliente",c:"ok"},{k:"No interesa",c:"off"},
   {k:"Volver a contactar",c:"warn"}
 ];
+// Cómo se ve cada estado (en la planilla se guardan los nombres de siempre)
+const NOMBRE = {"Respondió":"Contestó","No interesa":"No califica","Volver a contactar":"Contactar en…"};
+const nombreEstado = k=>NOMBRE[k]||k;
 const today = ()=>{ const d=new Date(); d.setMinutes(d.getMinutes()-d.getTimezoneOffset()); return d.toISOString().slice(0,10); };
 const addDays = n=>{ const d=new Date(); d.setDate(d.getDate()+n); d.setMinutes(d.getMinutes()-d.getTimezoneOffset()); return d.toISOString().slice(0,10); };
 const due = l=>l.estado==="Volver a contactar" && (!l.contactar || l.contactar<=today());
+// Por contactar: los que todavía no tocaste. Contactados: les escribiste o llamaste y falta que avance.
+// Seguimiento: los que tienen fecha (volver a contactar o demo), por día.
+const SEGUIMIENTO = l=>l.estado==="Volver a contactar"||l.estado==="Demo";
 const TABS = [
-  {k:"hoy",label:"Por contactar",test:l=>l.estado==="Pendiente"||l.estado==="No atendió"||due(l)},
-  {k:"seg",label:"Seguimiento",test:l=>l.estado==="WhatsApp enviado"||l.estado==="DM enviado"||(l.estado==="Volver a contactar"&&!due(l))},
-  {k:"demo",label:"Demos",test:l=>l.estado==="Demo"},
-  {k:"cal",label:"Respondieron",test:l=>l.estado==="Respondió"||l.estado==="Demo"||l.estado==="Cliente"},
-  {k:"todos",label:"Todos",test:()=>true}
+  {k:"hoy",label:"Por contactar",test:l=>l.estado==="Pendiente"},
+  {k:"cont",label:"Contactados",test:l=>l.estado==="WhatsApp enviado"||l.estado==="DM enviado"||l.estado==="No atendió"||l.estado==="Respondió"},
+  {k:"seg",label:"Seguimiento",test:SEGUIMIENTO}
+];
+// Fecha de seguimiento: la de la demo o la de volver a contactar (las atrasadas y las demos pasadas cuentan como hoy)
+const fechaSeg = l=>{ const f = l.estado==="Demo" ? demoDia(l) : (l.contactar||""); return !f || f<today() ? today() : f; };
+const SECCIONES = [
+  ["Hoy", f=>f<=today()], ["Mañana", f=>f===addDays(1)], ["Esta semana", f=>f>addDays(1) && f<=addDays(7)], ["En adelante", f=>f>addDays(7)]
 ];
 // Fecha del último cambio: la trae la planilla; si no, se guarda en el celular como respaldo
 let localCambios = {}; try{ localCambios = JSON.parse(localStorage.getItem("cambios")||"{}"); }catch(e){}
@@ -166,7 +180,7 @@ const fmt = p=>{ if(!p) return ""; const m=String(p).match(/^54(9?)(\d{2,4})(\d{
 let API=null, KEY=null;
 function loadConn(){ const c=store.get("conexion"); if(!c||!c.includes("|")) return false; [API,KEY]=c.split("|"); return true; }
 
-let leads = [], msg = DEFAULT_MSG, tab = store.get("filtro")||"hoy", open = null, loading = true, error = "", query = "";
+let leads = [], msg = DEFAULT_MSG, tab = ["hoy","cont","seg"].includes(store.get("filtro")) ? store.get("filtro") : "hoy", open = null, loading = true, error = "", query = "";
 // Check de "le escribí" en Por contactar: queda en el celular hasta que lo pasás a Seguimiento.
 // Guarda por qué canal le escribiste (ig o wa) para ponerle el estado correcto al pasarlo.
 let checks = {}; try{ checks = JSON.parse(localStorage.getItem("checks")||"{}"); }catch(e){}
@@ -202,6 +216,27 @@ async function setState(lead, next, {undo=true, label, contactar="", demo}={}){
   toast(label || `${lead.nombre}: ${next}`, undo ? ()=>{ setState(lead, prev, {undo:false, label:"Listo, lo volví atrás", contactar:prevC, demo: prev==="Demo" && prevD ? prevD : undefined}); } : null);
   try{ await api({fila:lead.fila, estado:next, contactar, ...(next==="Demo" && demo ? {demo} : {})}); }
   catch(e){ lead.estado = prev; lead.contactar = prevC; lead.cambio = prevCambio; lead.demo = prevD; render(); toast("No se pudo guardar. Revisá la conexión y probá de nuevo."); }
+}
+
+// Elegir estado: hoja grande con opciones claras
+function askEstado(lead){
+  const el=document.getElementById("sheet");
+  const ops = [["Pendiente","new"],["Respondió","ok"],["Volver a contactar","warn"],["Demo","ok"],["No interesa","off"]];
+  if(lead.estado!=="Pendiente") ops.push(["Cliente","ok"]);
+  el.innerHTML = `<div class="sheet-bg" id="bg"><div class="sheet big" role="dialog" aria-label="Cambiar estado">
+    <h3>${esc(lead.nombre)}</h3>
+    <div class="choices">${ops.map(([k,c])=>`<button class="choice" type="button" data-s="${esc(k)}" aria-pressed="${k===lead.estado}"><span class="dot ${c}"></span>${esc(nombreEstado(k))}</button>`).join("")}</div>
+    <button class="choice ghost" type="button" id="estX">Cancelar</button>
+  </div></div>`;
+  const close=()=>{ el.innerHTML=""; };
+  el.querySelector("#bg").onclick=e=>{ if(e.target.id==="bg") close(); };
+  el.querySelector("#estX").onclick=close;
+  el.querySelectorAll("[data-s]").forEach(b=>b.onclick=()=>{
+    const k=b.dataset.s; close();
+    if(k==="Volver a contactar") return askDays(lead);
+    if(k==="Demo") return askDemo(lead);
+    setState(lead, k, {label:`${lead.nombre}: ${nombreEstado(k)}`});
+  });
 }
 
 function askDays(lead){
@@ -265,17 +300,17 @@ function askIgAccount(lead, href){
   el.querySelector("#igYes").onclick=()=>{ store.set("igOkAt", String(Date.now())); close(); sendIg(lead); };
 }
 function sendIg(lead){
-  if(tab==="demo" && lead.estado==="Demo"){ navigator.clipboard?.writeText(demoMsg(lead)).catch(()=>{}); toast("Mensaje copiado. Pegalo en el chat y mandalo."); return; }
+  if(lead.estado==="Demo"){ navigator.clipboard?.writeText(demoMsg(lead)).catch(()=>{}); toast("Mensaje copiado. Pegalo en el chat y mandalo."); return; }
   navigator.clipboard?.writeText(msg).catch(()=>{});
-  if(TABS[0].test(lead)){ marcar(lead,"ig"); toast("Mensaje copiado. Cuando lo mandes, tocá Pasar a Seguimiento."); }
+  if(TABS[0].test(lead)){ marcar(lead,"ig"); toast("Mensaje copiado. Cuando lo mandes, tocá Pasar a Contactados."); }
   else toast("Mensaje copiado. Pegalo en el chat y mandalo.");
 }
 function sendWa(lead){
-  if(TABS[0].test(lead)){ marcar(lead,"wa"); toast("Cuando lo mandes, tocá Pasar a Seguimiento."); }
+  if(TABS[0].test(lead)){ marcar(lead,"wa"); toast("Cuando lo mandes, tocá Pasar a Contactados."); }
 }
 function pasar(lead){
   const canal = checks[lead.fila] || (lead.ig && !lead.tel ? "ig" : lead.tel ? "wa" : "ig");
-  setState(lead, canal==="ig" ? "DM enviado" : "WhatsApp enviado", {label:`${lead.nombre}: pasado a Seguimiento`});
+  setState(lead, canal==="ig" ? "DM enviado" : "WhatsApp enviado", {label:`${lead.nombre}: pasado a Contactados`});
 }
 
 let tt;
@@ -317,36 +352,33 @@ function render(){
   }
   const cnt = k=>leads.filter(l=>TABS.find(t=>t.k===k).test(l)).length;
   document.getElementById("tabs").innerHTML = TABS.map(t=>`<button class="tab" type="button" data-t="${t.k}" aria-pressed="${t.k===tab}">${t.label}<small>${cnt(t.k)}</small></button>`).join("");
-  const pend = leads.filter(l=>l.estado==="Pendiente").length;
-  document.getElementById("summary").textContent = leads.length ? `${pend} sin tocar de ${leads.length}` : "";
+  document.getElementById("summary").textContent = "";
   const list=document.getElementById("list");
   if(loading && !leads.length){ list.innerHTML=`<div class="empty"><b>Cargando la lista</b><span>Trayendo los talleres de tu planilla.</span></div>`; return; }
   if(error==="clave"){ list.innerHTML=`<div class="empty"><b>La conexión no es válida</b><span>Abrí de nuevo el link de conexión que te pasó Claude.</span></div>`; return; }
   if(error && !leads.length){ list.innerHTML=`<div class="empty"><b>No hay conexión</b><span>Revisá internet y tocá Actualizar.</span></div>`; return; }
   const t=TABS.find(x=>x.k===tab)||TABS[0];
   let rows=leads.filter(l=>t.test(l));
-  const buscar = tab==="seg";
+  const buscar = tab==="cont" || tab==="seg";
   document.getElementById("search").hidden = !buscar;
   const q = buscar ? sinAcentos(query.trim()) : "";
   if(q){ const qd=q.replace(/\D/g,""); rows = rows.filter(l=>sinAcentos(l.nombre).includes(q) || sinAcentos(l.ig).includes(q.replace(/^@/,"")) || (qd.length>=3 && String(l.tel||"").includes(qd))); }
   if(q && !rows.length){ list.innerHTML=`<div class="empty"><b>No encontré “${esc(query.trim())}”</b><span>Probá con otra parte del nombre o del Instagram.</span></div>`; return; }
-  if(tab==="demo"){ rows = [...rows.filter(l=>!demoPasada(l)).sort((a,b)=>a.demo.localeCompare(b.demo)), ...rows.filter(demoPasada).sort((a,b)=>(b.demo||"").localeCompare(a.demo||""))]; }
-  else if(tab==="hoy"){ rows = [...rows.filter(due).sort((a,b)=>(a.contactar||"").localeCompare(b.contactar||"")), ...rows.filter(l=>!due(l))]; }
-  else if(tab!=="todos"){ rows = rows.map((l,i)=>[l,i]).sort((a,b)=>cambioDe(b[0]).localeCompare(cambioDe(a[0])) || b[1]-a[1]).map(x=>x[0]); }
-  if(!rows.length){ list.innerHTML=`<div class="empty"><b>${tab==="hoy"?"Contactaste a todos":tab==="demo"?"No hay demos agendadas":"Nada por acá"}</b><span>${tab==="hoy"?"Pedile a Claude que prospecte más.":tab==="demo"?"Cuando alguien acepte, tocá su estado y elegí Demo.":"Cuando cambies un estado, aparece en esta lista."}</span></div>`; return; }
-  list.innerHTML = rows.map(l=>{
-    const d=STATES.find(s=>s.k===l.estado)||STATES[0], isOpen=open===l.fila;
+  // Contactados: primero los que contestaron, después por último contacto
+  if(tab==="cont"){ rows = rows.map((l,i)=>[l,i]).sort((a,b)=>(b[0].estado==="Respondió")-(a[0].estado==="Respondió") || cambioDe(b[0]).localeCompare(cambioDe(a[0])) || b[1]-a[1]).map(x=>x[0]); }
+  if(!rows.length){ list.innerHTML=`<div class="empty"><b>${tab==="hoy"?"Contactaste a todos":tab==="seg"?"No hay seguimientos ni demos":"Nada por acá"}</b><span>${tab==="hoy"?"Pedile a Claude que prospecte más.":tab==="seg"?"Cuando alguien te conteste, tocá su estado y elegí Contactar en… o Demo.":"Cuando le escribas o llames a alguien, aparece acá."}</span></div>`; return; }
+  const tarjeta = l=>{
+    const d=STATES.find(s=>s.k===l.estado)||STATES[0];
     const meta=[fmt(l.tel), l.ig?"@"+l.ig:""].filter(Boolean).join("  ·  ");
-    const enDemos = tab==="demo" && l.estado==="Demo";
+    const enDemos = l.estado==="Demo";
     const when = (l.estado==="Demo" && demoLabel(l)) || whenLabel(l) || ((l.estado!=="Pendiente" && cambioDe(l)) ? `Último contacto: ${fdate(cambioDe(l))}` : "");
     const wa = l.tel?`https://wa.me/${l.tel}?text=${encodeURIComponent(enDemos?demoMsg(l):msg)}`:"#";
     const ig = l.ig?`https://ig.me/m/${encodeURIComponent(l.ig)}`:"#";
     return `<article class="item" data-f="${l.fila}">
       <div class="row">
         <div class="who"><h2 class="name">${esc(l.nombre)}</h2>${meta?`<div class="meta">${esc(meta)}</div>`:""}${when?`<div class="when${due(l)||(l.estado==="Demo"&&demoDia(l)===today())?" due":""}${whenLabel(l)||(l.estado==="Demo"&&!demoPasada(l))?"":" soft"}">${esc(when)}</div>`:""}</div>
-        <button class="state" type="button" data-act="toggle" aria-expanded="${isOpen}"><span class="dot ${d.c}"></span><span class="lbl" style="overflow:hidden;text-overflow:ellipsis">${esc(l.estado)}</span></button>
+        <button class="state" type="button" data-act="toggle"><span class="dot ${d.c}"></span><span class="lbl" style="overflow:hidden;text-overflow:ellipsis">${esc(nombreEstado(l.estado))}</span></button>
       </div>
-      ${isOpen?`<div class="picker" role="group" aria-label="Cambiar estado">${STATES.filter(s=>s.k!=="Volver a contactar").map(s=>`<button class="opt" type="button" data-s="${esc(s.k)}" aria-pressed="${s.k===l.estado}"><span class="dot ${s.c}"></span>${esc(s.k)}</button>`).join("")}${serverV>=2?`<button class="opt" type="button" data-act="days" aria-pressed="${l.estado==="Volver a contactar"}"><span class="dot warn"></span>Contactar en…</button>`:""}</div>`:""}
       <div class="acts">
         <a class="btn call" href="${l.tel?"tel:+"+esc(l.tel):"#"}" data-act="call" aria-disabled="${!l.tel}">${I.call}<span class="lbl">Llamar</span></a>
         <a class="btn wa" href="${esc(wa)}" target="_blank" rel="noopener" data-act="wa" aria-disabled="${!l.tel}">${I.wa}<span class="lbl">WhatsApp</span></a>
@@ -356,10 +388,20 @@ function render(){
       ${enDemos?`<button class="pass ghostish" type="button" data-act="horario">Cambiar horario</button>`:""}
       ${TABS[0].test(l)?`<div class="done">
         <label class="chk${checks[l.fila]?" on":""}"><input type="checkbox" data-act="check" ${checks[l.fila]?"checked":""}>Le escribí</label>
-        <button class="pass" type="button" data-act="pasar" ${checks[l.fila]?"":"disabled"}>Pasar a Seguimiento</button>
+        <button class="pass" type="button" data-act="pasar" ${checks[l.fila]?"":"disabled"}>Pasar a Contactados</button>
       </div>`:""}
     </article>`;
-  }).join("");
+  };
+  if(tab==="seg"){
+    // por día: hoy, mañana, esta semana y en adelante; en cada uno, primero las demos (por hora) y después los seguimientos
+    const orden = (a,b)=>fechaSeg(a).localeCompare(fechaSeg(b)) || (b.estado==="Demo")-(a.estado==="Demo") || (a.demo||"").localeCompare(b.demo||"");
+    list.innerHTML = SECCIONES.map(([titulo,en])=>{
+      const grupo = rows.filter(l=>en(fechaSeg(l))).sort(orden);
+      return grupo.length ? `<h2 class="sec">${titulo} <small>${grupo.length}</small></h2>${grupo.map(tarjeta).join("")}` : "";
+    }).join("");
+    return;
+  }
+  list.innerHTML = rows.map(tarjeta).join("");
 }
 
 let pendingCall = null;
@@ -367,7 +409,7 @@ function onListClick(e){
   const item=e.target.closest(".item"); if(!item) return;
   const lead=leads.find(l=>String(l.fila)===item.dataset.f); if(!lead) return;
   const act=e.target.closest("[data-act]")?.dataset.act;
-  if(act==="toggle"){ open = open===lead.fila?null:lead.fila; render(); return; }
+  if(act==="toggle"){ askEstado(lead); return; }
   if(act==="call"){ pendingCall = lead; return; } // el link abre el teléfono; al volver, preguntamos cómo salió
   if(act==="wa"){ sendWa(lead); return; }
   if(act==="check"){ if(e.target.checked) marcar(lead, lead.ig && !lead.tel ? "ig" : lead.tel ? "wa" : "ig"); else { delete checks[lead.fila]; saveChecks(); render(); } return; }
