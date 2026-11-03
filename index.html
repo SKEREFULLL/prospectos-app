@@ -107,7 +107,7 @@ button:focus-visible,a:focus-visible,input:focus-visible{outline:2px solid var(-
 <script>
 const STATES = [
   {k:"Pendiente",c:"new"},{k:"No atendió",c:"warn"},{k:"WhatsApp enviado",c:"warn"},{k:"DM enviado",c:"warn"},
-  {k:"Respondió",c:"ok"},{k:"Demo",c:"ok"},{k:"Cliente",c:"ok"},{k:"No interesa",c:"off"},
+  {k:"Respondió",c:"ok"},{k:"Videos enviados",c:"ok"},{k:"Demo",c:"ok"},{k:"Cliente",c:"ok"},{k:"No interesa",c:"off"},
   {k:"Volver a contactar",c:"warn"}
 ];
 // Cómo se ve cada estado (en la planilla se guardan los nombres de siempre)
@@ -121,7 +121,7 @@ const due = l=>l.estado==="Volver a contactar" && (!l.contactar || l.contactar<=
 const SEGUIMIENTO = l=>l.estado==="Volver a contactar"||l.estado==="Demo";
 const TABS = [
   {k:"hoy",label:"Por contactar",test:l=>l.estado==="Pendiente"},
-  {k:"cont",label:"Contactados",test:l=>l.estado==="WhatsApp enviado"||l.estado==="DM enviado"||l.estado==="No atendió"||l.estado==="Respondió"},
+  {k:"cont",label:"Contactados",test:l=>l.estado==="WhatsApp enviado"||l.estado==="DM enviado"||l.estado==="No atendió"||l.estado==="Respondió"||l.estado==="Videos enviados"},
   {k:"seg",label:"Seguimiento",test:SEGUIMIENTO}
 ];
 // Fecha de seguimiento: la de la demo o la de volver a contactar (las atrasadas y las demos pasadas cuentan como hoy)
@@ -198,12 +198,24 @@ async function api(params){
   if(j.error) throw new Error(j.error);
   return j;
 }
+// Cambios hechos acá que la planilla todavía no confirmó: si la app se actualiza antes de que se
+// terminen de guardar (por ejemplo al volver de WhatsApp o de una llamada), se aplican igual y no "vuelven".
+let pendientes = {}; try{ pendientes = JSON.parse(localStorage.getItem("pendientes")||"{}"); }catch(e){}
+const savePendientes = ()=>store.set("pendientes", JSON.stringify(pendientes));
+function aplicarPendientes(){
+  for(const l of leads){
+    const p = pendientes[l.fila]; if(!p) continue;
+    if(l.estado===p.estado && (l.contactar||"")===(p.contactar||"")){ delete pendientes[l.fila]; continue; } // la planilla ya lo tiene
+    l.estado = p.estado; l.contactar = p.contactar; if(p.demo!==undefined) l.demo = p.demo; l.cambio = p.cambio;
+  }
+  savePendientes();
+}
 let serverV = Number(store.get("serverV")||1);
 async function refresh(){
   try{
     const j = await api({});
-    leads = j.filas||[]; msg = DEFAULT_MSG; serverV = j.v||1; store.set("serverV", String(serverV)); error=""; loading=false;
-    store.set("cache", JSON.stringify(j));
+    leads = j.filas||[]; aplicarPendientes(); msg = DEFAULT_MSG; serverV = j.v||1; store.set("serverV", String(serverV)); error=""; loading=false;
+    store.set("cache", JSON.stringify({...j, filas: leads}));
   }catch(e){ error = e.message==="clave" ? "clave" : "red"; loading=false; }
   render();
 }
@@ -216,14 +228,21 @@ async function setState(lead, next, {undo=true, label, contactar="", demo}={}){
   localCambios[lead.fila] = lead.cambio; store.set("cambios", JSON.stringify(localCambios));
   open=null; render(); store.set("cache", JSON.stringify({filas:leads,mensaje:msg}));
   toast(label || `${lead.nombre}: ${next}`, undo ? ()=>{ setState(lead, prev, {undo:false, label:"Listo, lo volví atrás", contactar:prevC, demo: prev==="Demo" && prevD ? prevD : undefined}); } : null);
+  const marca = Date.now();
+  pendientes[lead.fila] = {estado:next, contactar, cambio:lead.cambio, marca, ...(demo!==undefined ? {demo} : {})}; savePendientes();
   try{ await api({fila:lead.fila, estado:next, contactar, ...(next==="Demo" && demo ? {demo} : {})}); }
-  catch(e){ lead.estado = prev; lead.contactar = prevC; lead.cambio = prevCambio; lead.demo = prevD; render(); toast("No se pudo guardar. Revisá la conexión y probá de nuevo."); }
+  catch(e){
+    if(pendientes[lead.fila]?.marca===marca){ delete pendientes[lead.fila]; savePendientes(); }
+    lead.estado = prev; lead.contactar = prevC; lead.cambio = prevCambio; lead.demo = prevD; render(); toast("No se pudo guardar. Revisá la conexión y probá de nuevo."); return;
+  }
+  // guardado: ya no hace falta recordarlo (si mientras tanto no hubo otro cambio de este mismo)
+  if(pendientes[lead.fila]?.marca===marca){ delete pendientes[lead.fila]; savePendientes(); }
 }
 
 // Elegir estado: hoja grande con opciones claras
 function askEstado(lead){
   const el=document.getElementById("sheet");
-  const ops = [["Pendiente","new"],["Respondió","ok"],["Volver a contactar","warn"],["Demo","ok"],["No interesa","off"]];
+  const ops = [["Pendiente","new"],["Respondió","ok"],["Videos enviados","ok"],["Volver a contactar","warn"],["Demo","ok"],["No interesa","off"]];
   if(lead.estado!=="Pendiente") ops.push(["Cliente","ok"]);
   el.innerHTML = `<div class="sheet-bg" id="bg"><div class="sheet big" role="dialog" aria-label="Cambiar estado">
     <h3>${esc(lead.nombre)}</h3>
@@ -367,7 +386,7 @@ function render(){
   if(q){ const qd=q.replace(/\D/g,""); rows = rows.filter(l=>sinAcentos(l.nombre).includes(q) || sinAcentos(l.ig).includes(q.replace(/^@/,"")) || (qd.length>=3 && String(l.tel||"").includes(qd))); }
   if(q && !rows.length){ list.innerHTML=`<div class="empty"><b>No encontré “${esc(query.trim())}”</b><span>Probá con otra parte del nombre o del Instagram.</span></div>`; return; }
   // Contactados: primero los que contestaron, después por último contacto
-  if(tab==="cont"){ rows = rows.map((l,i)=>[l,i]).sort((a,b)=>(b[0].estado==="Respondió")-(a[0].estado==="Respondió") || cambioDe(b[0]).localeCompare(cambioDe(a[0])) || b[1]-a[1]).map(x=>x[0]); }
+  if(tab==="cont"){ rows = rows.map((l,i)=>[l,i]).sort((a,b)=>(["Respondió","Videos enviados"].includes(b[0].estado))-(["Respondió","Videos enviados"].includes(a[0].estado)) || cambioDe(b[0]).localeCompare(cambioDe(a[0])) || b[1]-a[1]).map(x=>x[0]); }
   if(!rows.length){ list.innerHTML=`<div class="empty"><b>${tab==="hoy"?"Contactaste a todos":tab==="seg"?"No hay seguimientos ni demos":"Nada por acá"}</b><span>${tab==="hoy"?"Pedile a Claude que prospecte más.":tab==="seg"?"Cuando alguien te conteste, tocá su estado y elegí Contactar en… o Demo.":"Cuando le escribas o llames a alguien, aparece acá."}</span></div>`; return; }
   const tarjeta = l=>{
     const d=STATES.find(s=>s.k===l.estado)||STATES[0];
@@ -445,7 +464,7 @@ function askCall(lead){
   const close=()=>{ el.innerHTML=""; };
   el.querySelector("#bg").onclick=e=>{ if(e.target.id==="bg") close(); };
   el.querySelectorAll("[data-s]").forEach(b=>b.onclick=()=>{ close(); if(b.dataset.s) setState(lead,b.dataset.s); });
-  const ok=el.querySelector("#cWaOk"); if(ok) ok.onclick=()=>{ close(); setState(lead,"Respondió",{label:`${lead.nombre}: le mandaste los videos`}); };
+  const ok=el.querySelector("#cWaOk"); if(ok) ok.onclick=()=>{ close(); setState(lead,"Videos enviados",{label:`${lead.nombre}: le mandaste los videos`}); };
   const w=el.querySelector("#cWa"); if(w) w.onclick=()=>{ close(); if(TABS[0].test(lead)) sendWa(lead); else setState(lead,"WhatsApp enviado",{label:`WhatsApp a ${lead.nombre} marcado como enviado`}); };
 }
 document.addEventListener("visibilitychange",()=>{
