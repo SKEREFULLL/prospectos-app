@@ -160,6 +160,8 @@ function demoMsg(l){
   return `Hola, ¿cómo andás? Te confirmo la demo ${diaTexto(f).replace(/^el /,"del ").replace(/^mañana/,"de mañana")} a las ${h}. Te mando el link del Meet un rato antes.`;
 }
 const DEFAULT_MSG = "Hola, como están? me llamo Joaquin y desarrollo software para talleres\n\nVi que hacen muebles a medida e hice un programa que arma el presupuesto, el despiece y el plano de corte en menos de 5 minutos, sin tener que modelar pieza por pieza en SketchUp\n\n¿Les gustaría ver un video de 1 minuto que muestra como funciona?";
+// Para el que atendió el llamado: los dos reels y la propuesta de una llamada de 15 minutos.
+const MSG_CONTESTO = "Hola, soy Joaquin, el que te llamó recién, te paso 2 videos cortitos para que veas las dos funciones principales del programa:\n\nhttps://www.instagram.com/reel/De-qOB8i0yo/\n\nhttps://www.instagram.com/reel/De_zR1Qil5C/\n\nEn resumen: cargás los muebles con las medidas y en menos de 5 minutos tenés el presupuesto, el despiece, el plano de corte y la lista de compras\n\nSi querés, hacemos una llamada de 15 min y presupuestamos un mueble tuyo, así ves cómo funciona con los muebles de tu taller\n\n¿Te gustaría?";
 const I = {
   call:'<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M6.6 10.8a15.1 15.1 0 0 0 6.6 6.6l2.2-2.2c.3-.3.7-.4 1-.2 1.1.4 2.3.6 3.6.6.6 0 1 .4 1 1V20c0 .6-.4 1-1 1A17 17 0 0 1 3 4c0-.6.4-1 1-1h3.5c.6 0 1 .4 1 1 0 1.3.2 2.5.6 3.6.1.3 0 .7-.2 1z"/></svg>',
   wa:'<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2zm5.3 14.1c-.2.6-1.3 1.2-1.8 1.2-.5.1-1 .2-3.3-.7-2.8-1.1-4.5-4-4.7-4.2-.1-.2-1.1-1.5-1.1-2.9s.7-2.1 1-2.4c.3-.3.6-.3.8-.3h.6c.2 0 .4 0 .6.5l.9 2.1c.1.2.1.4 0 .6l-.4.6-.4.4c-.1.2-.3.3-.1.6.2.3.8 1.4 1.8 2.2 1.2 1.1 2.2 1.4 2.5 1.6.3.1.5.1.7-.1l.9-1.1c.2-.3.4-.2.7-.1l2 1c.3.1.5.2.5.3.1.2.1.6-.1 1.2z"/></svg>',
@@ -433,6 +435,7 @@ function askCall(lead){
     <h3>¿Cómo salió con ${esc(lead.nombre)}?</h3>
     <div class="choices">
       ${hasWa?`<a class="choice primary" id="cWa" href="https://wa.me/${lead.tel}?text=${encodeURIComponent(msg)}" target="_blank" rel="noopener">${I.wa}No atendió, mandar WhatsApp</a>`:""}
+      ${hasWa?`<a class="choice primary" id="cWaOk" href="https://wa.me/${lead.tel}?text=${encodeURIComponent(MSG_CONTESTO)}" target="_blank" rel="noopener">${I.wa}Atendió, mandarle los videos</a>`:""}
       <button class="choice" type="button" data-s="No atendió">No atendió</button>
       <button class="choice" type="button" data-s="Respondió">Hablamos, le interesa</button>
       <button class="choice" type="button" data-s="No interesa">No le interesa</button>
@@ -442,6 +445,7 @@ function askCall(lead){
   const close=()=>{ el.innerHTML=""; };
   el.querySelector("#bg").onclick=e=>{ if(e.target.id==="bg") close(); };
   el.querySelectorAll("[data-s]").forEach(b=>b.onclick=()=>{ close(); if(b.dataset.s) setState(lead,b.dataset.s); });
+  const ok=el.querySelector("#cWaOk"); if(ok) ok.onclick=()=>{ close(); setState(lead,"Respondió",{label:`${lead.nombre}: le mandaste los videos`}); };
   const w=el.querySelector("#cWa"); if(w) w.onclick=()=>{ close(); if(TABS[0].test(lead)) sendWa(lead); else setState(lead,"WhatsApp enviado",{label:`WhatsApp a ${lead.nombre} marcado como enviado`}); };
 }
 document.addEventListener("visibilitychange",()=>{
