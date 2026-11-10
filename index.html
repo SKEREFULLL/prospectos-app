@@ -363,7 +363,7 @@ function render(){
   if(!app.querySelector("header")){
     app.innerHTML = `<header>
       <div class="top"><h1>Prospectos</h1><div class="count"><div id="summary"></div><button class="refresh" id="refreshBtn" type="button">Actualizar</button></div></div>
-      <nav class="tabs" id="tabs" aria-label="Filtrar"></nav>
+      <a href="seguimientos/revisar.html">Revisar primeros seguimientos</a><nav class="tabs" id="tabs" aria-label="Filtrar"></nav>
       <input class="search" id="search" type="search" placeholder="Buscar por nombre, Instagram o teléfono" aria-label="Buscar" autocomplete="off" hidden>
     </header><main class="list" id="list" aria-live="polite"></main>`;
     document.getElementById("search").oninput=e=>{ query=e.target.value; render(); };

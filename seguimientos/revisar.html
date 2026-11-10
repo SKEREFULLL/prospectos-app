@@ -1,0 +1,48 @@
+<!doctype html><html lang="es"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Revisar seguimientos</title>
+<style>body{font:16px system-ui;background:#f4f6f8;color:#17212b;max-width:800px;margin:auto;padding:24px}article{background:white;border:1px solid #ddd;border-radius:12px;padding:20px;margin:16px 0}textarea{box-sizing:border-box;width:100%;min-height:140px;font:inherit;padding:12px}button,a{font:inherit}button{padding:10px;margin:8px 8px 0 0;cursor:pointer}small{display:block;margin:10px 0}#error{color:#a11}</style>
+<a href="../">Volver al CRM</a><h1>Revisar seguimientos</h1>
+<p>Confirmá en el chat que sigue sin responder antes de enviar. Los registros de envío de esta pantalla se guardan en este navegador.</p>
+<button id="refresh">Actualizar desde la planilla</button><p id="error" role="status"></p><main id="list"></main>
+<script type="module">
+const texto="Buenas, cómo andás? te había escrito por el programa para presupuestar muebles a partir de planos. ¿Ya usás algún software para eso o no es algo que te interese por ahora?";
+const lista=document.querySelector('#list'), aviso=document.querySelector('#error');
+const hoy=()=>new Intl.DateTimeFormat('en-CA',{timeZone:'America/Argentina/Buenos_Aires',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
+let hechos;try{hechos=JSON.parse(localStorage.getItem('seguimientosConfirmados')||'{}')}catch{hechos={}}
+const clave=l=>JSON.stringify([l.tel,l.ig,l.estado,l.cambio]);
+async function cargar(){
+ lista.replaceChildren();aviso.textContent='Actualizando…';
+ try{
+  const conn=localStorage.getItem('conexion');
+  if(!conn)throw Error('Abrí primero el CRM con tu conexión habitual y volvé a esta pantalla.');
+  const separador=conn.indexOf('|');if(separador<0)throw Error('La conexión del CRM está incompleta.');
+  const url=new URL(conn.slice(0,separador));url.searchParams.set('k',conn.slice(separador+1));
+  const response=await fetch(url);if(!response.ok)throw Error('No se pudo actualizar la planilla.');
+  const datos=await response.json();if(datos.error)throw Error('La planilla rechazó la conexión.');
+  const filas=(datos.filas||[]).filter(l=>['DM enviado','WhatsApp enviado'].includes(l.estado)&&/^\d{4}-\d{2}-\d{2}$/.test(l.cambio||'')&&l.cambio<hoy()&&!hechos[clave(l)]);
+  aviso.textContent=filas.length+' primeros seguimientos pendientes de revisión.';
+  for(const lead of filas){
+   const card=document.createElement('article'),titulo=document.createElement('h2'),detalle=document.createElement('p'),input=document.createElement('textarea'),confirmar=document.createElement('input'),label=document.createElement('label'),abrir=document.createElement('button'),hecho=document.createElement('button'),estado=document.createElement('small');
+   titulo.textContent=lead.nombre;detalle.textContent='Último cambio '+lead.cambio+' · '+(lead.tel||lead.ig||'Sin contacto');
+   input.value=texto;input.setAttribute('aria-label','Mensaje para '+lead.nombre);
+   confirmar.type='checkbox';label.append(confirmar,document.createTextNode(' Revisé el chat y sigue sin responder'));
+   abrir.textContent='Abrir en WhatsApp';abrir.disabled=true;
+   hecho.textContent='Confirmar que lo envié';hecho.disabled=true;
+   const tel=String(lead.tel||'').replace(/^\+/,'');
+   if(!/^\d{8,15}$/.test(tel))estado.textContent='Este prospecto necesita revisión del contacto desde el CRM.';
+   confirmar.onchange=()=>{abrir.disabled=!confirmar.checked||!/^\d{8,15}$/.test(tel)};
+   input.oninput=()=>{hecho.disabled=true};
+   abrir.onclick=()=>{
+    if(!confirmar.checked||!input.value.trim())return;
+    const tab=window.open('https://wa.me/'+tel+'?text='+encodeURIComponent(input.value),'_blank','noopener');
+    hecho.disabled=false;estado.textContent='Comprobá el destinatario en WhatsApp y enviá. Después confirmá acá.';
+   };
+   hecho.onclick=()=>{
+    try{hechos[clave(lead)]={fecha:new Date().toISOString()};localStorage.setItem('seguimientosConfirmados',JSON.stringify(hechos));card.remove();aviso.textContent='Envío registrado en este navegador.'}
+    catch{estado.textContent='No se pudo guardar el registro en este navegador.'}
+   };
+   card.append(titulo,detalle,input,label,document.createElement('br'),abrir,hecho,estado);lista.append(card);
+  }
+ }catch(e){aviso.textContent=e.message}
+}
+document.querySelector('#refresh').onclick=cargar;cargar();
+</script></html>
