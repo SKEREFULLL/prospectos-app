@@ -60,6 +60,15 @@ async function webhook(request,env) {
   return json({ok:true});
 }
 async function api(request,env,fetchMeta) {
+  const target=new URL(request.url);
+  if(target.pathname==='/api/bridge' && request.method==='GET') {
+    if(!env.BRIDGE_TOKEN||request.headers.get('Authorization')!==`Bearer ${env.BRIDGE_TOKEN}`) return json({error:'No autorizado'},401);
+    const raw=target.searchParams.get('after')||'0';
+    if(!/^\d{1,15}$/.test(raw))return json({error:'Cursor inválido'},400);
+    const rows=await stmt(env.DB,'SELECT * FROM events WHERE sequence>? ORDER BY sequence ASC LIMIT 100',Number(raw)).all();
+    return json({events:rows.results,next_cursor:rows.results.at(-1)?.sequence||Number(raw)});
+  }
+
   if(!env.ADMIN_TOKEN||request.headers.get('Authorization')!==`Bearer ${env.ADMIN_TOKEN}`) return json({error:'No autorizado'},401);
   const url=new URL(request.url), now=Math.floor(Date.now()/1000);
   if(url.pathname==='/api/state'&&request.method==='GET') {

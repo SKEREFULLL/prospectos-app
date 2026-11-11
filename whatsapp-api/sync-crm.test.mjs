@@ -1,0 +1,6 @@
+import {test} from 'node:test';import assert from 'node:assert/strict';import vm from 'node:vm';import {readFileSync}from'node:fs';
+const ctx=vm.createContext({});vm.runInContext(readFileSync(new URL('./sync-crm.gs',import.meta.url),'utf8'),ctx);
+const row=(state,phone)=>['Taller',state,'','','',phone];
+test('encuentra 54/549 y solo cambia estados de prospección',()=>{for(const state of ['WhatsApp enviado','DM enviado','Videos enviados']){const d=ctx.waDecidirEvento_({kind:'incoming',phone:'5493794000000'},[row(state,'543794000000')]);assert.equal(d.fila,2);assert.equal(d.cambiarEstado,true);}});
+test('conserva cliente, demo y no interesa',()=>{for(const state of ['Cliente','Demo','No interesa'])assert.equal(ctx.waDecidirEvento_({kind:'incoming',phone:'5493794000000'},[row(state,'543794000000')]).cambiarEstado,false);});
+test('no inventa prospecto ni elige entre duplicados; entregado no cambia etapa',()=>{const e={kind:'incoming',phone:'5493794000000'};assert.equal(ctx.waDecidirEvento_(e,[]).tipo,'sin_prospecto');assert.equal(ctx.waDecidirEvento_(e,[row('Demo',e.phone),row('Cliente',e.phone)]).tipo,'duplicado');assert.equal(ctx.waDecidirEvento_({kind:'delivered'},[]).tipo,'estado');});
