@@ -14,8 +14,7 @@
 App Prospectos CRM 2576987516121438; porfolio Joaquin Software 2922559054767759.
 Número de prueba +1 (555) 194-0430; Phone Number ID 1475247372330489; WABA 1509958214302961.
 
-**Falta META_APP_SECRET**: Meta exige contraseña del propietario para mostrarlo. Modal abierto en Configuración > Información básica. No se guardó ni se modificó la contraseña del propietario.
-Después: guardar META_APP_SECRET como secreto en Cloudflare; configurar /webhook y VERIFY_TOKEN; suscribir messages; comprobar entrega de eventos.
+META_APP_SECRET guardado cifrado en Cloudflare después de que el propietario ingresó su contraseña. Webhook /webhook verificado y campo messages suscrito. El test genérico del panel usa phone_number_id 123456123 y queda fuera del filtro del emisor de prueba; no se toma como evidencia de importación de mensajes reales.
 La página de Meta advierte que mientras la app no esté publicada solo entrega los webhooks de prueba del panel. No publicar la app ni registrar un teléfono comercial sin autorización.
 
 ## Google Apps Script
@@ -24,8 +23,9 @@ Proyecto vinculado a Prospectos amoblamientos en joacuver@gmail.com, script 1H0t
 Añadido y guardado WhatsAppSync.gs (sync-crm.gs). Código.gs existente conservado; no se desplegó otra versión del doGet.
 Propiedades WHATSAPP_URL y WHATSAPP_BRIDGE_TOKEN configuradas. El token solo permite leer /api/bridge; no permite aprobar mensajes.
 
-**Pendiente autorización Google**: al probar sincronizarWhatsApp apareció «Google no ha verificado esta aplicación». No se atravesó la advertencia. El propietario debe revisar y completar el consentimiento desde su cuenta.
-No hay trigger de WhatsApp habilitado todavía. Después del consentimiento: ejecutar sincronizarWhatsApp, verificar hoja WhatsApp eventos y recién entonces activarSincronizacionWhatsApp (cada 5 minutos).
+El propietario completó la autorización de Google. sincronizarWhatsApp se ejecutó manualmente y terminó sin errores. Se creó por UI un trigger de sincronizarWhatsApp, Principal, temporizador por minutos, cada 5 minutos. Se verificó su existencia junto al avisoDiario previo; no se duplicó ni alteró ese aviso. Falta confirmar el primer evento de WhatsApp real en la planilla.
+
+No hay destinatarios de prueba cargados en Meta. Próximo dato requerido: número elegido por el propietario (excluir personal protegido). Añadir destinatario necesita verificación; pedir aprobación antes de cualquier código o mensaje de prueba. No se ha vinculado ni migrado teléfono comercial.
 
 La sincronización conserva Demo/Cliente/No interesa; una respuesta pasa los estados de prospección a Respondió. Si el teléfono no existe o hay duplicados, solo registra el evento para revisar. No crea contactos, no borra demos y no envía mensajes. No clasifica semánticamente respuestas automáticas de empresas: cualquier entrante pausa revisión.
 
