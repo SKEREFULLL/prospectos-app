@@ -10,5 +10,5 @@
     "TEST_RECIPIENTS": "",
     "SENDS_ENABLED": "false"
   },
-  "d1_databases": [{"binding": "DB", "database_name": "prospectos-whatsapp-prueba", "database_id": "REEMPLAZAR_ANTES_DE_PUBLICAR"}]
+  "d1_databases": [{"binding": "DB", "database_name": "prospectos-whatsapp-prueba", "database_id": "91b4f61d-e9a0-4fe4-a420-d51111333b21"}]
 }

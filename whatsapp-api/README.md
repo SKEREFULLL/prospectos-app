@@ -1,6 +1,12 @@
 # WhatsApp CRM: integración aislada de prueba
 
-Estado 2026-11-10: código preparado y probado localmente. **No publicado, no conectado a Meta, no conectado todavía a la planilla del CRM.**
+Estado 2026-11-10: Worker y D1 publicados y conectados. Salud y panel comprobados en navegador. **Faltan secretos, webhook de Meta y sincronización con planilla; no hubo envíos.**
+
+Servidor: https://prospectos-whatsapp-prueba.joacuver.workers.dev
+D1: 91b4f61d-e9a0-4fe4-a420-d51111333b21
+Publicación manual desde Cloudflare: dashboard-worker.mjs incluye el panel para funcionar sin assets separados.
+
+Próximo paso: autorización del propietario para generar token de acceso Meta de esta app y almacenar token/secreto de app como secretos del Worker de prueba, junto a VERIFY_TOKEN/ADMIN_TOKEN. No se han generado.
 
 ## Estado de las cuentas comprobado en Meta
 
