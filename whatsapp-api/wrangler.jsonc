@@ -1,0 +1,14 @@
+{
+  "name": "prospectos-whatsapp-prueba",
+  "main": "worker.mjs",
+  "compatibility_date": "2026-11-10",
+  "workers_dev": true,
+  "assets": {"directory": "./public", "binding": "ASSETS", "run_worker_first": true},
+  "vars": {
+    "WABA_ID": "1509958214302961",
+    "PHONE_NUMBER_ID": "1475247372330489",
+    "TEST_RECIPIENTS": "",
+    "SENDS_ENABLED": "false"
+  },
+  "d1_databases": [{"binding": "DB", "database_name": "prospectos-whatsapp-prueba", "database_id": "REEMPLAZAR_ANTES_DE_PUBLICAR"}]
+}
